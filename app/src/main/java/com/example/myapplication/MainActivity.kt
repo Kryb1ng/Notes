@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.combinedClickable
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,13 +26,25 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-data class Task(val text: String, val isComleted: Boolean = false)
+data class Task(
+    val text: String,
+    val isCopmleted: Boolean = false,
+    val createdDate: Long = System.currentTimeMillis()
+)
 
 @Composable
 fun TodoScreen() {
     var textInput by remember { mutableStateOf("") }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<Task?>(null) }
+    var editText by remember { mutableStateOf("") }
 
     val tasks = remember { mutableStateListOf<Task>() }
+    fun openEditDialog(task: Task) {
+        editingTask = task
+        editText = task.text
+        showEditDialog = true
+    }
 
     Column(
         modifier = Modifier
@@ -84,15 +97,50 @@ fun TodoScreen() {
                         onToggleComplete = {
                             val index = tasks.indexOf(task)
                             if (index != -1) {
-                                tasks [index] = task.copy(isComleted = !task.isComleted)
+                                tasks [index] = task.copy(isCopmleted = !task.isCopmleted)
                             }
                         },
                         onDelete = {
                             tasks.remove(task)
-                        }
+                        },
+                        onEdit = { openEditDialog(task)}
                     )
                 }
             }
+        }
+        if (showEditDialog && editingTask != null) {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false},
+                title = { Text("Редактировать задачу") },
+                text = {
+                    OutlinedTextField(
+                        value = editText,
+                        onValueChange = { editText = it },
+                        singleLine = true,
+                        label = {Text("Новый текст")}
+                    )
+                },
+                confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (editText.isNotBlank()) {
+                            val index = tasks.indexOf(editingTask)
+                            if (index != -1) {
+                                tasks[index] = editingTask!!.copy(text = editText)
+                            }
+                        }
+                        showEditDialog = false
+                    }
+                ) {
+                    Text("Сохранить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {showEditDialog = false}) {
+                    Text("Отмена")
+                }
+            }
+            )
         }
     }
 }
@@ -101,7 +149,8 @@ fun TodoScreen() {
 fun TodoItem(
     task: Task,
     onToggleComplete: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -111,9 +160,14 @@ fun TodoItem(
         Text(
             text = task.text,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .combinedClickable(
+                    onClick = { },
+                    onLongClick = onEdit
+                ),
             softWrap = true,
-            textDecoration = if (task.isComleted) {
+            textDecoration = if (task.isCopmleted) {
                 androidx.compose.ui.text.style.TextDecoration.LineThrough
             } else {
                 null
@@ -123,7 +177,7 @@ fun TodoItem(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Button(onClick = onToggleComplete) {
-                Text(if (task.isComleted) "Вернуть" else "Готово")
+                Text(if (task.isCopmleted) "Вернуть" else "Готово")
             }
             Button(onClick = onDelete) {
                 Text("Удалить")
