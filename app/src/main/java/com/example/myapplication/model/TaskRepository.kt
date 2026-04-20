@@ -1,26 +1,21 @@
 package com.example.myapplication.model
 
-class TaskRepository {
-    private val _tasks = mutableListOf<Task>()
-    val tasks: List<Task> get() = _tasks.toList()
+import android.content.Context
+import kotlinx.coroutines.flow.Flow
+class TaskRepository(context: Context) {
+    private val taskDao = TaskDatabase.getDatabase(context).taskDao()
 
-    fun addTask(task: Task) {
-        _tasks.add(task)
+    val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
+
+    suspend fun insert(task: Task) {
+        taskDao.insert(task)
     }
 
-    fun updateTask(updatedTask: Task) {
-        val index = _tasks.indexOfFirst { it.id == updatedTask.id }
-        if (index != -1) {
-            _tasks[index] = updatedTask
-        }
+    suspend fun update(task: Task) {
+        taskDao.update(task)
     }
-
-    fun deleteTask(task: Task) {
-        _tasks.removeAll { it.id == task.id }
-    }
-
-    fun getTasksSorted(): List<Task> {
-        return _tasks.sortedByDescending { it.priority }
+    suspend fun delete(task: Task) {
+        taskDao.delete(task)
     }
 }
 

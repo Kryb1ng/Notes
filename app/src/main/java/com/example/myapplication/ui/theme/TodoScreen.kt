@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.theme
 
+import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,13 +12,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.model.Task
 import com.example.myapplication.viewmodel.TodoViewModel
 
 @Composable
-fun TodoScreen(viewModel: TodoViewModel = viewModel()) {
-    val tasks = viewModel.tasks
-    var textInput by remember { mutableStateOf("") } // локальное состояние для поля ввода (связано с ViewModel через событие)
+fun TodoScreen() {
+    val context = LocalContext.current
+    val factory = remember {
+        object : ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return TodoViewModel(context.applicationContext as Application) as T
+            }
+        }
+    }
+    val viewModel: TodoViewModel = viewModel(factory = factory)
+
+    val tasks by viewModel.tasks.collectAsState(initial = emptyList())
+
+    // Локальное состояние для поля ввода
+    var textInput by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -50,7 +66,7 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel()) {
                 onClick = {
                     viewModel.updateTextInput(textInput)
                     viewModel.addTask()
-                    textInput = "" // очищаем локальное поле
+                    textInput = "" // очищаем поле
                 }
             ) {
                 Text("Добавить")
@@ -139,4 +155,3 @@ fun TodoScreen(viewModel: TodoViewModel = viewModel()) {
         }
     }
 }
-

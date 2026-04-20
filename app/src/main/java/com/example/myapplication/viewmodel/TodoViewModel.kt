@@ -1,28 +1,32 @@
 package com.example.myapplication.viewmodel
 
-import androidx.compose.runtime.mutableStateListOf
+import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.TaskRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class TodoViewModel : ViewModel() {
-    private val repository = TaskRepository()
+class TodoViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = TaskRepository(application)
 
-    // Состояния UI, которые будут наблюдаться Compose
-    private val _tasks = mutableStateListOf<Task>()   // реактивный список
-    val tasks: List<Task> get() = _tasks
+    // Список задач из репозитория (StateFlow для Compose)
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+    val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
 
+    // UI-состояния (временные, не хранятся в БД)
     var textInput by mutableStateOf("")
         private set
     var selectedPriority by mutableStateOf(2)
         private set
     var showError by mutableStateOf(false)
         private set
-
-    // Для диалога редактирования
     var showEditDialog by mutableStateOf(false)
         private set
     var editingTask by mutableStateOf<Task?>(null)
@@ -30,13 +34,13 @@ class TodoViewModel : ViewModel() {
     var editText by mutableStateOf("")
         private set
 
-    fun updateEditText(newText: String) {
-        editText = newText
-    }
-
     init {
-        // Загружаем задачи из репозитория (пока пусто)
-        refreshTasks()
+        // Подписываемся на Flow из репозитория и обновляем StateFlow
+        viewModelScope.launch {
+            repository.allTasks.collect { taskList ->
+                _tasks.value = taskList
+            }
+        }
     }
 
     fun updateTextInput(newText: String) {
@@ -57,21 +61,24 @@ class TodoViewModel : ViewModel() {
             text = textInput,
             priority = selectedPriority
         )
-        repository.addTask(newTask)
+        viewModelScope.launch {
+            repository.insert(newTask)
+        }
         textInput = ""
         showError = false
-        refreshTasks()
     }
 
     fun toggleComplete(task: Task) {
         val updated = task.copy(isCompleted = !task.isCompleted)
-        repository.updateTask(updated)
-        refreshTasks()
+        viewModelScope.launch {
+            repository.update(updated)
+        }
     }
 
     fun deleteTask(task: Task) {
-        repository.deleteTask(task)
-        refreshTasks()
+        viewModelScope.launch {
+            repository.delete(task)
+        }
     }
 
     fun openEditDialog(task: Task) {
@@ -80,14 +87,19 @@ class TodoViewModel : ViewModel() {
         showEditDialog = true
     }
 
+    fun updateEditText(newText: String) {
+        editText = newText
+    }
+
     fun saveEdit() {
         val task = editingTask ?: return
         if (editText.isNotBlank()) {
             val updated = task.copy(text = editText)
-            repository.updateTask(updated)
+            viewModelScope.launch {
+                repository.update(updated)
+            }
         }
         closeEditDialog()
-        refreshTasks()
     }
 
     fun closeEditDialog() {
@@ -95,10 +107,4 @@ class TodoViewModel : ViewModel() {
         editingTask = null
         editText = ""
     }
-
-    private fun refreshTasks() {
-        _tasks.clear()
-        _tasks.addAll(repository.getTasksSorted())
-    }
 }
-
