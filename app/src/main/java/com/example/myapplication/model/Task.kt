@@ -1,14 +1,10 @@
 package com.example.myapplication.model
 
-import java.util.Date
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import java.util.UUID
 
-@Entity(tableName = "tasks")
 data class Task(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val text: String,
+    val id: String = UUID.randomUUID().toString(),
+    val text: String = "",           // ← значение по умолчанию
     val isCompleted: Boolean = false,
     val createdDate: Long = System.currentTimeMillis(),
     val priority: Int = 2

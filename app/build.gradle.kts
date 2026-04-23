@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp") version "2.3.6"
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -61,6 +62,12 @@ dependencies {
     //Подключение Room
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
     ksp("androidx.room:room-compiler:2.8.4")
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
+
+
+    //Подключение Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.firebase:firebase-auth")
 }

@@ -8,19 +8,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.TaskRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class TodoViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = TaskRepository(application)
 
-    // Список задач из репозитория (StateFlow для Compose)
-    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
-    val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
+    // 1. Репозиторий (теперь без параметров)
+    private val repository = TaskRepository()
 
-    // UI-состояния (временные, не хранятся в БД)
+    // 2. Поток задач из Firestore
+    val tasks: Flow<List<Task>> = repository.getAllTasks()
+
+    // 3. Состояния UI (всё правильно, без изменений)
     var textInput by mutableStateOf("")
         private set
     var selectedPriority by mutableStateOf(2)
@@ -34,15 +33,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
     var editText by mutableStateOf("")
         private set
 
-    init {
-        // Подписываемся на Flow из репозитория и обновляем StateFlow
-        viewModelScope.launch {
-            repository.allTasks.collect { taskList ->
-                _tasks.value = taskList
-            }
-        }
-    }
-
+    // 4. Методы (все верны)
     fun updateTextInput(newText: String) {
         textInput = newText
         if (showError) showError = false
