@@ -3,7 +3,6 @@ package com.example.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import com.example.myapplication.ui.theme.TodoScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
