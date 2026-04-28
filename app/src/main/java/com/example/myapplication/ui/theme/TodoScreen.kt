@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.viewmodel.TodoViewModel
+import android.util.Log
 
 @Composable
 fun TodoScreen() {
@@ -30,6 +31,10 @@ fun TodoScreen() {
 
     val tasks by viewModel.tasks.collectAsState(initial = emptyList())
 
+    LaunchedEffect(tasks) {
+        Log.d("TodoScreen", "Tasks count: ${tasks.size}")
+        tasks.forEach { Log.d("TodoScreen", "Task: ${it.text}, completed: ${it.isCompleted}") }
+    }
     // Локальное состояние для поля ввода
     var textInput by remember { mutableStateOf("") }
 

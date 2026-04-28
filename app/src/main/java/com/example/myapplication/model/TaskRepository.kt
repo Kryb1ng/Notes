@@ -11,15 +11,19 @@ class TaskRepository {
     private val tasksCollection = db.collection("tasks")
 
     fun getAllTasks(): Flow<List<Task>> = callbackFlow {
-        val subscription = tasksCollection.addSnapshotListener { snapshot, _ ->
+        val snapshotListener = tasksCollection.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
             if (snapshot != null) {
-                val tasks = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Task::class.java)?.copy(id = doc.id)
+                val tasks = snapshot.documents.mapNotNull { document ->
+                    document.toObject(Task::class.java)?.copy(id = document.id)
                 }
                 trySend(tasks)
             }
         }
-        awaitClose { subscription.remove() }
+        awaitClose { snapshotListener.remove() }
     }
 
     suspend fun insert(task: Task) {
@@ -34,4 +38,3 @@ class TaskRepository {
         tasksCollection.document(task.id).delete().await()
     }
 }
-
