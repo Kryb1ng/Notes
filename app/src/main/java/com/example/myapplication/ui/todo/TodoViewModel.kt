@@ -74,7 +74,14 @@ class TodoViewModel(
                 ),
             )
         }
-        _uiState.update { it.copy(textInput = "", showEmptyInputError = false) }
+        _uiState.update {
+            it.copy(
+                textInput = "",
+                selectedPriority = Priority.MEDIUM,
+                showEmptyInputError = false,
+                showAddDialog = false,                 // ← закрываем диалог
+            )
+        }
     }
 
     fun onStartTask(task: Task) {
@@ -168,6 +175,27 @@ class TodoViewModel(
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = errorMessage) }
             }
+        }
+    }
+
+    fun onOpenAddDialog() {
+        _uiState.update {
+            it.copy(
+                showAddDialog = true,
+                textInput = "",
+                selectedPriority = Priority.MEDIUM,
+                showEmptyInputError = false,
+            )
+        }
+    }
+
+    fun onDismissAddDialog() {
+        _uiState.update {
+            it.copy(
+                showAddDialog = false,
+                textInput = "",
+                showEmptyInputError = false,
+            )
         }
     }
 

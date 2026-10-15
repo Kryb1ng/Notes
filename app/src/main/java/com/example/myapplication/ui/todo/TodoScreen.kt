@@ -13,21 +13,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.model.Priority
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.User
-import com.example.myapplication.ui.todo.components.AddTaskRow
+import com.example.myapplication.ui.todo.components.AddTaskDialog
 import com.example.myapplication.ui.todo.components.EditTaskDialog
-import com.example.myapplication.ui.todo.components.PrioritySelector
 import com.example.myapplication.ui.todo.components.TaskFilterRow
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoScreen(
     user: User,
     onLogout: () -> Unit,
 ) {
     val viewModel: TodoViewModel = viewModel(
-        key = user.name,                       // ← пересоздать при смене пользователя
+        key = user.name,
         factory = TodoViewModel.factory(user),
     )
 
-    val tasks by viewModel.tasks.collectAsStateWithLifecycle(initialValue = emptyList())
+    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
@@ -39,11 +40,13 @@ fun TodoScreen(
         isAdmin = viewModel.isAdmin,
         onTextChange = viewModel::onTextInputChange,
         onPrioritySelected = viewModel::onPrioritySelected,
-        onFilterSelected = viewModel::onFilterSelected,          // ← новое
+        onFilterSelected = viewModel::onFilterSelected,
+        onOpenAddDialog = viewModel::onOpenAddDialog,
+        onDismissAddDialog = viewModel::onDismissAddDialog,
         onAddClick = viewModel::onAddTaskClick,
-        onStart = viewModel::onStartTask,                        // ← вместо onToggleComplete
-        onComplete = viewModel::onCompleteTask,                  // ←
-        onRevert = viewModel::onRevertTask,                      // ←
+        onStart = viewModel::onStartTask,
+        onComplete = viewModel::onCompleteTask,
+        onRevert = viewModel::onRevertTask,
         onDelete = viewModel::onDeleteTask,
         onEdit = viewModel::onEditTaskClick,
         onEditTextChange = viewModel::onEditTextChange,
@@ -64,11 +67,13 @@ private fun TodoContent(
     isAdmin: Boolean,
     onTextChange: (String) -> Unit,
     onPrioritySelected: (Priority) -> Unit,
-    onFilterSelected: (TaskFilter) -> Unit,                      // ← новое
+    onFilterSelected: (TaskFilter) -> Unit,
+    onOpenAddDialog: () -> Unit,
+    onDismissAddDialog: () -> Unit,
     onAddClick: () -> Unit,
-    onStart: (Task) -> Unit,                                     // ← вместо onToggleComplete
-    onComplete: (Task) -> Unit,                                  // ←
-    onRevert: (Task) -> Unit,                                    // ←
+    onStart: (Task) -> Unit,
+    onComplete: (Task) -> Unit,
+    onRevert: (Task) -> Unit,
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
     onEditTextChange: (String) -> Unit,
@@ -95,6 +100,14 @@ private fun TodoContent(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onOpenAddDialog) {
+                Text(
+                    text = "+",
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+            }
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -102,22 +115,6 @@ private fun TodoContent(
                 .padding(innerPadding)
                 .padding(16.dp),
         ) {
-            AddTaskRow(
-                value = uiState.textInput,
-                onValueChange = onTextChange,
-                onAddClick = onAddClick,
-                showError = uiState.showEmptyInputError,
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            PrioritySelector(
-                selectedPriority = uiState.selectedPriority,
-                onPrioritySelected = onPrioritySelected,
-            )
-
-            Spacer(Modifier.height(8.dp))
-
             TaskFilterRow(
                 selected = uiState.selectedFilter,
                 onFilterSelected = onFilterSelected,
@@ -142,7 +139,7 @@ private fun TodoContent(
             Spacer(Modifier.height(16.dp))
 
             if (tasks.isEmpty()) {
-                Text("Пока нет задач. Добавьте первую!")
+                Text("Пока нет задач. Нажмите «+», чтобы добавить первую.")
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(tasks, key = { it.id }) { task ->
@@ -159,6 +156,18 @@ private fun TodoContent(
                 }
             }
         }
+    }
+
+    if (uiState.showAddDialog) {
+        AddTaskDialog(
+            textValue = uiState.textInput,
+            selectedPriority = uiState.selectedPriority,
+            showError = uiState.showEmptyInputError,
+            onTextChange = onTextChange,
+            onPrioritySelected = onPrioritySelected,
+            onConfirm = onAddClick,
+            onDismiss = onDismissAddDialog,
+        )
     }
 
     uiState.editDialog?.let { dialog ->
