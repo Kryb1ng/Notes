@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
  * ViewModel зависит от этого интерфейса, а не от Firebase.
  */
 interface TaskRepository {
-    fun getAllTasks(): Flow<List<Task>>
+    fun getAllTasks(): Flow<TasksSnapshot>
     suspend fun insert(task: Task)
     suspend fun update(task: Task)
     suspend fun delete(task: Task)

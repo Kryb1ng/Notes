@@ -11,7 +11,8 @@ data class Task(
     @get:PropertyName("isCompleted")
     @set:PropertyName("isCompleted")
     var isCompleted: Boolean = false,
+
     val createdDate: Long = System.currentTimeMillis(),
-    val priority: Int = 2
+    val priority: Priority = Priority.MEDIUM
 )
 

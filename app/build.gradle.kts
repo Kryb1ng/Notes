@@ -58,7 +58,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
+    implementation(libs.androidx.datastore.preferences)
     //Подключение Room
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
     ksp("androidx.room:room-compiler:2.8.4")

@@ -15,9 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.model.Task
-import com.example.myapplication.ui.todo.TodoUiState.Companion.PRIORITY_HIGH
-import com.example.myapplication.ui.todo.TodoUiState.Companion.PRIORITY_LOW
-import com.example.myapplication.ui.todo.TodoUiState.Companion.PRIORITY_MEDIUM
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,7 +35,7 @@ fun TodoItem(
             modifier = Modifier
                 .size(16.dp)
                 .clip(CircleShape)
-                .background(task.priority.toColor()),
+                .background(task.priority.dotColor()),
         )
         Spacer(Modifier.width(8.dp))
 
@@ -68,13 +65,6 @@ fun TodoItem(
             }
         }
     }
-}
-
-private fun Int.toColor(): Color = when (this) {
-    PRIORITY_LOW -> Color.Green
-    PRIORITY_MEDIUM -> Color.Yellow
-    PRIORITY_HIGH -> Color.Red
-    else -> Color.Gray
 }
 
 private fun formatDate(timestamp: Long): String =

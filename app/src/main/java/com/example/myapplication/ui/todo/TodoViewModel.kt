@@ -7,11 +7,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.myapplication.data.FirebaseTaskRepository
 import com.example.myapplication.data.TaskRepository
+import com.example.myapplication.model.Priority
 import com.example.myapplication.model.Task
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,7 +24,20 @@ class TodoViewModel(
     private val repository: TaskRepository,
 ) : ViewModel() {
 
-    val tasks: Flow<List<Task>> = repository.getAllTasks()
+    /** Общая подписка на Firestore — одна на всех потребителей. */
+    private val tasksSnapshot = repository.getAllTasks()
+        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+
+    /** Отсортированный список задач для UI. */
+    val tasks: StateFlow<List<Task>> = tasksSnapshot
+        .map { snapshot -> snapshot.tasks.sortedWith(TASK_COMPARATOR) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Флаг «оффлайн-режим». */
+    val isOffline: StateFlow<Boolean> = tasksSnapshot
+        .map { it.isOffline }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _uiState = MutableStateFlow(TodoUiState())
     val uiState: StateFlow<TodoUiState> = _uiState.asStateFlow()
@@ -30,7 +48,7 @@ class TodoViewModel(
         _uiState.update { it.copy(textInput = newText, showEmptyInputError = false) }
     }
 
-    fun onPrioritySelected(priority: Int) {
+    fun onPrioritySelected(priority: Priority) {
         _uiState.update { it.copy(selectedPriority = priority) }
     }
 
@@ -40,7 +58,7 @@ class TodoViewModel(
             _uiState.update { it.copy(showEmptyInputError = true) }
             return
         }
-        viewModelScope.launch {
+        launchCatching("Не удалось добавить задачу") {
             repository.insert(Task(text = state.textInput, priority = state.selectedPriority))
         }
         _uiState.update { it.copy(textInput = "", showEmptyInputError = false) }
@@ -49,13 +67,15 @@ class TodoViewModel(
     // --- Действия над задачей ---
 
     fun onToggleComplete(task: Task) {
-        viewModelScope.launch {
+        launchCatching("Не удалось обновить задачу") {
             repository.update(task.copy(isCompleted = !task.isCompleted))
         }
     }
 
     fun onDeleteTask(task: Task) {
-        viewModelScope.launch { repository.delete(task) }
+        launchCatching("Не удалось удалить задачу") {
+            repository.delete(task)
+        }
     }
 
     // --- Диалог редактирования ---
@@ -74,7 +94,7 @@ class TodoViewModel(
     fun onSaveEditClick() {
         val dialog = _uiState.value.editDialog ?: return
         if (dialog.editedText.isNotBlank()) {
-            viewModelScope.launch {
+            launchCatching("Не удалось сохранить изменения") {
                 repository.update(dialog.task.copy(text = dialog.editedText))
             }
         }
@@ -85,8 +105,39 @@ class TodoViewModel(
         _uiState.update { it.copy(editDialog = null) }
     }
 
+    // --- Ошибки ---
+
+    fun onErrorDismissed() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    // --- Утилиты ---
+
+    private fun launchCatching(
+        errorMessage: String,
+        block: suspend () -> Unit,
+    ) {
+        viewModelScope.launch {
+            try {
+                block()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = errorMessage) }
+            }
+        }
+    }
+
     companion object {
-        /** Единая точка сборки зависимостей ViewModel. */
+        /**
+         * Сортировка по умолчанию:
+         * 1) невыполненные сверху,
+         * 2) внутри группы — по убыванию приоритета (HIGH → MEDIUM → LOW),
+         * 3) при равенстве приоритета — свежие сверху.
+         */
+        private val TASK_COMPARATOR: Comparator<Task> =
+            compareBy<Task> { it.isCompleted }
+                .thenByDescending { it.priority.weight }
+                .thenByDescending { it.createdDate }
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 TodoViewModel(repository = FirebaseTaskRepository())
