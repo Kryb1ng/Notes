@@ -49,7 +49,7 @@ fun TodoItem(
                 text = task.text,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.combinedClickable(
-                    onClick = { /* можно добавить быстрый toggle, но пока пусто */ },
+                    onClick = {  },
                     onLongClick = onEdit
                 ),
                 softWrap = true,
@@ -74,7 +74,7 @@ fun TodoItem(
     }
 }
 
-// Утилита форматирования даты (можно вынести в отдельный файл utils)
+// Утилита форматирования даты
 private fun formatDate(timestamp: Long): String {
     val date = Date(timestamp)
     val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
