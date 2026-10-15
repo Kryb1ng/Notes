@@ -3,7 +3,7 @@ package com.example.myapplication.ui.todo
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
+//import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,9 +61,9 @@ private fun TodoContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .padding(16.dp),
     ) {
-        Spacer(Modifier.height(32.dp))
 
         AddTaskRow(
             value = uiState.textInput,

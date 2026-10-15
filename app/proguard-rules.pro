@@ -19,3 +19,16 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Сохранить модель Task и её аннотации для Firestore
+-keepclassmembers class com.example.myapplication.model.Task {
+    <init>();
+    <fields>;
+    <methods>;
+}
+
+# Сохранить аннотации @PropertyName (Firebase использует их для маппинга)
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
