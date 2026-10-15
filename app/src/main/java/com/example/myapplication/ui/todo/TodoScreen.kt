@@ -16,8 +16,7 @@ import com.example.myapplication.model.User
 import com.example.myapplication.ui.todo.components.AddTaskRow
 import com.example.myapplication.ui.todo.components.EditTaskDialog
 import com.example.myapplication.ui.todo.components.PrioritySelector
-
-@OptIn(ExperimentalMaterial3Api::class)
+import com.example.myapplication.ui.todo.components.TaskFilterRow
 @Composable
 fun TodoScreen(
     user: User,
@@ -40,8 +39,11 @@ fun TodoScreen(
         isAdmin = viewModel.isAdmin,
         onTextChange = viewModel::onTextInputChange,
         onPrioritySelected = viewModel::onPrioritySelected,
+        onFilterSelected = viewModel::onFilterSelected,          // ← новое
         onAddClick = viewModel::onAddTaskClick,
-        onToggleComplete = viewModel::onToggleComplete,
+        onStart = viewModel::onStartTask,                        // ← вместо onToggleComplete
+        onComplete = viewModel::onCompleteTask,                  // ←
+        onRevert = viewModel::onRevertTask,                      // ←
         onDelete = viewModel::onDeleteTask,
         onEdit = viewModel::onEditTaskClick,
         onEditTextChange = viewModel::onEditTextChange,
@@ -62,8 +64,11 @@ private fun TodoContent(
     isAdmin: Boolean,
     onTextChange: (String) -> Unit,
     onPrioritySelected: (Priority) -> Unit,
+    onFilterSelected: (TaskFilter) -> Unit,                      // ← новое
     onAddClick: () -> Unit,
-    onToggleComplete: (Task) -> Unit,
+    onStart: (Task) -> Unit,                                     // ← вместо onToggleComplete
+    onComplete: (Task) -> Unit,                                  // ←
+    onRevert: (Task) -> Unit,                                    // ←
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
     onEditTextChange: (String) -> Unit,
@@ -111,6 +116,13 @@ private fun TodoContent(
                 onPrioritySelected = onPrioritySelected,
             )
 
+            Spacer(Modifier.height(8.dp))
+
+            TaskFilterRow(
+                selected = uiState.selectedFilter,
+                onFilterSelected = onFilterSelected,
+            )
+
             if (isOffline) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
@@ -137,7 +149,9 @@ private fun TodoContent(
                         TodoItem(
                             task = task,
                             isAdmin = isAdmin,
-                            onToggleComplete = { onToggleComplete(task) },
+                            onStart = { onStart(task) },
+                            onComplete = { onComplete(task) },
+                            onRevert = { onRevert(task) },
                             onDelete = { onDelete(task) },
                             onEdit = { onEdit(task) },
                         )

@@ -6,6 +6,7 @@ import com.example.myapplication.model.Task
 data class TodoUiState(
     val textInput: String = "",
     val selectedPriority: Priority = Priority.MEDIUM,
+    val selectedFilter: TaskFilter = TaskFilter.ALL,
     val showEmptyInputError: Boolean = false,
     val errorMessage: String? = null,
     val editDialog: EditDialogState? = null,

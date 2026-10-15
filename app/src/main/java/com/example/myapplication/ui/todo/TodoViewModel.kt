@@ -11,6 +11,7 @@ import com.example.myapplication.model.Priority
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.User
 import com.example.myapplication.model.UserRole
+import com.example.myapplication.model.TaskStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
 
 class TodoViewModel(
     private val repository: TaskRepository,
@@ -29,20 +31,25 @@ class TodoViewModel(
 
     val isAdmin: Boolean = currentUser.role == UserRole.ADMIN
 
+    private val _uiState = MutableStateFlow(TodoUiState())
+    val uiState: StateFlow<TodoUiState> = _uiState.asStateFlow()
+
     private val tasksSnapshot = repository.getAllTasks()
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
-    val tasks: StateFlow<List<Task>> = tasksSnapshot
-        .map { snapshot -> snapshot.tasks.sortedWith(TASK_COMPARATOR) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tasks: StateFlow<List<Task>> = combine(
+        tasksSnapshot,
+        _uiState.map { it.selectedFilter }.distinctUntilChanged(),
+    ) { snapshot, filter ->
+        snapshot.tasks
+            .filter { filter.matches(it) }
+            .sortedWith(TASK_COMPARATOR)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val isOffline: StateFlow<Boolean> = tasksSnapshot
         .map { it.isOffline }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    private val _uiState = MutableStateFlow(TodoUiState())
-    val uiState: StateFlow<TodoUiState> = _uiState.asStateFlow()
 
     fun onTextInputChange(newText: String) {
         _uiState.update { it.copy(textInput = newText, showEmptyInputError = false) }
@@ -70,16 +77,46 @@ class TodoViewModel(
         _uiState.update { it.copy(textInput = "", showEmptyInputError = false) }
     }
 
-    fun onToggleComplete(task: Task) {
-        launchCatching("Не удалось обновить задачу") {
-            val nowCompleted = !task.isCompleted
+    fun onStartTask(task: Task) {
+        launchCatching("Не удалось перевести задачу в работу") {
             repository.update(
                 task.copy(
-                    isCompleted = nowCompleted,
-                    completedBy = if (nowCompleted) currentUser.name else null,
+                    status = TaskStatus.IN_PROGRESS,
+                    startedDate = System.currentTimeMillis(),
+                    startedBy = currentUser.name,
                 ),
             )
         }
+    }
+
+    fun onCompleteTask(task: Task) {
+        launchCatching("Не удалось завершить задачу") {
+            repository.update(
+                task.copy(
+                    status = TaskStatus.COMPLETED,
+                    completedDate = System.currentTimeMillis(),
+                    completedBy = currentUser.name,
+                ),
+            )
+        }
+    }
+
+    fun onRevertTask(task: Task) {
+        launchCatching("Не удалось вернуть задачу") {
+            repository.update(
+                task.copy(
+                    status = TaskStatus.ACTIVE,
+                    startedDate = null,
+                    startedBy = null,
+                    completedDate = null,
+                    completedBy = null,
+                ),
+            )
+        }
+    }
+
+    fun onFilterSelected(filter: TaskFilter) {
+        _uiState.update { it.copy(selectedFilter = filter) }
     }
 
     fun onDeleteTask(task: Task) {
@@ -136,7 +173,7 @@ class TodoViewModel(
 
     companion object {
         private val TASK_COMPARATOR: Comparator<Task> =
-            compareBy<Task> { it.isCompleted }
+            compareBy<Task> { it.status.sortOrder }
                 .thenByDescending { it.priority.weight }
                 .thenByDescending { it.createdDate }
 
