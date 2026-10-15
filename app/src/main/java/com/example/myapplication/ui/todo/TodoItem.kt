@@ -4,14 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.TaskStatus
 import java.text.SimpleDateFormat
@@ -58,9 +61,31 @@ fun TodoItem(
             )
 
             Spacer(Modifier.height(4.dp))
-
-            // Журнал событий задачи — показываем только то, что произошло
             TaskTimeline(task)
+
+            // Отчёт (комментарий + фото) — только если задача завершена
+            if (task.isCompleted) {
+                task.reportComment?.let { comment ->
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Отчёт: $comment",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF444444),
+                    )
+                }
+                task.reportImageUrl?.let { url ->
+                    Spacer(Modifier.height(6.dp))
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "Фото отчёта",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                }
+            }
 
             Spacer(Modifier.height(4.dp))
 
@@ -85,23 +110,16 @@ fun TodoItem(
     }
 }
 
-/**
- * Список событий: создание, взятие в работу, завершение.
- * Каждая строка появляется только если событие реально произошло.
- */
 @Composable
 private fun TaskTimeline(task: Task) {
     val lineStyle = MaterialTheme.typography.bodySmall
     val mutedColor = Color.Gray
 
-    // Создание — всегда есть
     Text(
         text = "Добавил: ${task.createdBy.ifBlank { "—" }} · ${formatDate(task.createdDate)}",
         style = lineStyle,
         color = mutedColor,
     )
-
-    // Взятие в работу — только если задача хоть раз была в IN_PROGRESS
     if (task.startedBy != null && task.startedDate != null) {
         Text(
             text = "Взял в работу: ${task.startedBy} · ${formatDate(task.startedDate)}",
@@ -109,8 +127,6 @@ private fun TaskTimeline(task: Task) {
             color = mutedColor,
         )
     }
-
-    // Завершение — только если задача завершена
     if (task.completedBy != null && task.completedDate != null) {
         Text(
             text = "Выполнил: ${task.completedBy} · ${formatDate(task.completedDate)}",
@@ -118,8 +134,6 @@ private fun TaskTimeline(task: Task) {
             color = mutedColor,
         )
     }
-
-    // Текущий статус — отдельной строкой, чтобы был виден и для ACTIVE/IN_PROGRESS
     Text(
         text = "Статус: ${task.status.displayName}",
         style = lineStyle,

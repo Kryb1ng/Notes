@@ -9,18 +9,19 @@ data class Task(
     val priority: Priority = Priority.MEDIUM,
     val status: TaskStatus = TaskStatus.ACTIVE,
 
-    // Кто и когда создал — заполняется при добавлении
     val createdBy: String = "",
 
-    // Кто и когда взял в работу — заполняется при переходе в IN_PROGRESS
     val startedDate: Long? = null,
     val startedBy: String? = null,
 
-    // Кто и когда завершил — заполняется при переходе в COMPLETED
     val completedDate: Long? = null,
     val completedBy: String? = null,
+
+    // Отчёт о выполнении
+    val reportComment: String? = null,
+    val reportImageUrl: String? = null,
+    val reportImageStoragePath: String? = null,       // нужен для удаления файла при revert
 ) {
     val isCompleted: Boolean
         get() = status == TaskStatus.COMPLETED
 }
-

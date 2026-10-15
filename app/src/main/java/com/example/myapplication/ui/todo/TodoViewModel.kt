@@ -1,10 +1,12 @@
 package com.example.myapplication.ui.todo
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.myapplication.data.UploadedImage
 import com.example.myapplication.data.FirebaseTaskRepository
 import com.example.myapplication.data.TaskRepository
 import com.example.myapplication.model.Priority
@@ -96,20 +98,69 @@ class TodoViewModel(
         }
     }
 
-    fun onCompleteTask(task: Task) {
+    fun onOpenCompleteDialog(task: Task) {
+        _uiState.update {
+            it.copy(completeDialog = CompleteDialogState(task = task))
+        }
+    }
+
+    fun onCompleteCommentChange(text: String) {
+        _uiState.update { state ->
+            val dialog = state.completeDialog ?: return@update state
+            state.copy(completeDialog = dialog.copy(comment = text))
+        }
+    }
+
+    fun onCompleteImageSelected(uri: Uri?) {
+        _uiState.update { state ->
+            val dialog = state.completeDialog ?: return@update state
+            state.copy(completeDialog = dialog.copy(imageUri = uri))
+        }
+    }
+
+    fun onDismissCompleteDialog() {
+        _uiState.update { it.copy(completeDialog = null) }
+    }
+
+    fun onConfirmComplete() {
+        val dialog = _uiState.value.completeDialog ?: return
+        val task = dialog.task
+
+        _uiState.update {
+            it.copy(completeDialog = it.completeDialog?.copy(isUploading = true))
+        }
+
         launchCatching("Не удалось завершить задачу") {
+            var uploaded: UploadedImage? = null
+
+            // 1. Если выбрано фото — загружаем
+            if (dialog.imageUri != null) {
+                uploaded = repository.uploadReportImage(task.id, dialog.imageUri)
+            }
+
+            // 2. Обновляем задачу
             repository.update(
                 task.copy(
                     status = TaskStatus.COMPLETED,
                     completedDate = System.currentTimeMillis(),
                     completedBy = currentUser.name,
+                    reportComment = dialog.comment.ifBlank { null },
+                    reportImageUrl = uploaded?.downloadUrl,
+                    reportImageStoragePath = uploaded?.storagePath,
                 ),
             )
         }
+
+        _uiState.update { it.copy(completeDialog = null) }
     }
 
     fun onRevertTask(task: Task) {
         launchCatching("Не удалось вернуть задачу") {
+            // Удаляем файл из Storage, если он был
+            task.reportImageStoragePath?.let { path ->
+                runCatching { repository.deleteReportImage(path) }
+            }
+
             repository.update(
                 task.copy(
                     status = TaskStatus.ACTIVE,
@@ -117,6 +168,9 @@ class TodoViewModel(
                     startedBy = null,
                     completedDate = null,
                     completedBy = null,
+                    reportComment = null,
+                    reportImageUrl = null,
+                    reportImageStoragePath = null,
                 ),
             )
         }
@@ -173,7 +227,10 @@ class TodoViewModel(
             try {
                 block()
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = errorMessage) }
+                android.util.Log.e("TodoViewModel", "❌ $errorMessage", e)
+                _uiState.update {
+                    it.copy(errorMessage = "$errorMessage: ${e.message ?: e.javaClass.simpleName}")
+                }
             }
         }
     }
@@ -205,14 +262,14 @@ class TodoViewModel(
                 .thenByDescending { it.priority.weight }
                 .thenByDescending { it.createdDate }
 
-        /** Фабрика: собирает ViewModel с текущим пользователем. */
-        fun factory(user: User): ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                TodoViewModel(
-                    repository = FirebaseTaskRepository(),
-                    currentUser = user,
-                )
+        fun factory(context: android.content.Context, user: User): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+                    TodoViewModel(
+                        repository = FirebaseTaskRepository(context.applicationContext),
+                        currentUser = user,
+                    )
+                }
             }
-        }
     }
 }
