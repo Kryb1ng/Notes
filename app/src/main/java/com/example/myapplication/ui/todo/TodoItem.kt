@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +20,7 @@ import java.util.Locale
 @Composable
 fun TodoItem(
     task: Task,
+    isAdmin: Boolean,
     onToggleComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
@@ -50,20 +49,43 @@ fun TodoItem(
                 softWrap = true,
                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
             )
+
+            Text(
+                text = buildAuthorshipLine(task),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+            )
             Text(
                 text = formatDate(task.createdDate),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
             )
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onToggleComplete) {
                     Text(if (task.isCompleted) "Вернуть" else "Готово")
                 }
-                Button(onClick = onDelete) {
-                    Text("Удалить")
+                if (isAdmin) {
+                    Button(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) {
+                        Text("Удалить")
+                    }
                 }
             }
         }
+    }
+}
+
+private fun buildAuthorshipLine(task: Task): String {
+    val created = task.createdBy.ifBlank { "—" }
+    return if (task.completedBy != null) {
+        "Добавил: $created • Выполнил: ${task.completedBy}"
+    } else {
+        "Добавил: $created"
     }
 }
 

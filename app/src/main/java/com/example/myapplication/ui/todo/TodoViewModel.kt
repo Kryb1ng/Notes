@@ -9,6 +9,8 @@ import com.example.myapplication.data.FirebaseTaskRepository
 import com.example.myapplication.data.TaskRepository
 import com.example.myapplication.model.Priority
 import com.example.myapplication.model.Task
+import com.example.myapplication.model.User
+import com.example.myapplication.model.UserRole
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,18 +24,18 @@ import kotlinx.coroutines.launch
 
 class TodoViewModel(
     private val repository: TaskRepository,
+    val currentUser: User,
 ) : ViewModel() {
 
-    /** Общая подписка на Firestore — одна на всех потребителей. */
+    val isAdmin: Boolean = currentUser.role == UserRole.ADMIN
+
     private val tasksSnapshot = repository.getAllTasks()
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
-    /** Отсортированный список задач для UI. */
     val tasks: StateFlow<List<Task>> = tasksSnapshot
         .map { snapshot -> snapshot.tasks.sortedWith(TASK_COMPARATOR) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Флаг «оффлайн-режим». */
     val isOffline: StateFlow<Boolean> = tasksSnapshot
         .map { it.isOffline }
         .distinctUntilChanged()
@@ -41,8 +43,6 @@ class TodoViewModel(
 
     private val _uiState = MutableStateFlow(TodoUiState())
     val uiState: StateFlow<TodoUiState> = _uiState.asStateFlow()
-
-    // --- Ввод и приоритет ---
 
     fun onTextInputChange(newText: String) {
         _uiState.update { it.copy(textInput = newText, showEmptyInputError = false) }
@@ -59,26 +59,38 @@ class TodoViewModel(
             return
         }
         launchCatching("Не удалось добавить задачу") {
-            repository.insert(Task(text = state.textInput, priority = state.selectedPriority))
+            repository.insert(
+                Task(
+                    text = state.textInput,
+                    priority = state.selectedPriority,
+                    createdBy = currentUser.name,
+                ),
+            )
         }
         _uiState.update { it.copy(textInput = "", showEmptyInputError = false) }
     }
 
-    // --- Действия над задачей ---
-
     fun onToggleComplete(task: Task) {
         launchCatching("Не удалось обновить задачу") {
-            repository.update(task.copy(isCompleted = !task.isCompleted))
+            val nowCompleted = !task.isCompleted
+            repository.update(
+                task.copy(
+                    isCompleted = nowCompleted,
+                    completedBy = if (nowCompleted) currentUser.name else null,
+                ),
+            )
         }
     }
 
     fun onDeleteTask(task: Task) {
+        if (!isAdmin) {
+            _uiState.update { it.copy(errorMessage = "Удалять задачи может только администратор") }
+            return
+        }
         launchCatching("Не удалось удалить задачу") {
             repository.delete(task)
         }
     }
-
-    // --- Диалог редактирования ---
 
     fun onEditTaskClick(task: Task) {
         _uiState.update { it.copy(editDialog = EditDialogState(task, task.text)) }
@@ -105,13 +117,9 @@ class TodoViewModel(
         _uiState.update { it.copy(editDialog = null) }
     }
 
-    // --- Ошибки ---
-
     fun onErrorDismissed() {
         _uiState.update { it.copy(errorMessage = null) }
     }
-
-    // --- Утилиты ---
 
     private fun launchCatching(
         errorMessage: String,
@@ -127,20 +135,18 @@ class TodoViewModel(
     }
 
     companion object {
-        /**
-         * Сортировка по умолчанию:
-         * 1) невыполненные сверху,
-         * 2) внутри группы — по убыванию приоритета (HIGH → MEDIUM → LOW),
-         * 3) при равенстве приоритета — свежие сверху.
-         */
         private val TASK_COMPARATOR: Comparator<Task> =
             compareBy<Task> { it.isCompleted }
                 .thenByDescending { it.priority.weight }
                 .thenByDescending { it.createdDate }
 
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
+        /** Фабрика: собирает ViewModel с текущим пользователем. */
+        fun factory(user: User): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                TodoViewModel(repository = FirebaseTaskRepository())
+                TodoViewModel(
+                    repository = FirebaseTaskRepository(),
+                    currentUser = user,
+                )
             }
         }
     }
