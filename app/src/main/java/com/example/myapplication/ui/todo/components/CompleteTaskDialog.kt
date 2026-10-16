@@ -2,6 +2,7 @@ package com.example.myapplication.ui.todo.components
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.compose.runtime.saveable.rememberSaveable
 import coil.compose.AsyncImage
 import java.io.File
 import java.util.UUID
@@ -23,6 +25,7 @@ import java.util.UUID
 fun CompleteTaskDialog(
     comment: String,
     imageUri: Uri?,
+    requiresPhoto: Boolean,
     isUploading: Boolean,
     onCommentChange: (String) -> Unit,
     onImageSelected: (Uri?) -> Unit,
@@ -31,13 +34,12 @@ fun CompleteTaskDialog(
 ) {
     val context = LocalContext.current
 
-    // Галерея (Photos Picker) — без разрешений
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri -> onImageSelected(uri) }
 
-    // Камера: нужен временный файл, в который камера запишет фото
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraUriString by rememberSaveable { mutableStateOf<String?>(null) }
+    val cameraUri: Uri? = cameraUriString?.let(Uri::parse)
 
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -53,9 +55,11 @@ fun CompleteTaskDialog(
             "${context.packageName}.fileprovider",
             file,
         )
-        cameraUri = uri
+        cameraUriString = uri.toString()
         takePictureLauncher.launch(uri)
     }
+
+    val canConfirm = !isUploading && (!requiresPhoto || imageUri != null)
 
     AlertDialog(
         onDismissRequest = { if (!isUploading) onDismiss() },
@@ -70,6 +74,13 @@ fun CompleteTaskDialog(
                     minLines = 2,
                     maxLines = 4,
                     enabled = !isUploading,
+                )
+
+                // Заголовок фото-блока с подписью о статусе обязательности
+                Text(
+                    text = if (requiresPhoto) "Фото-отчёт (обязательно)" else "Фото-отчёт (опционально)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (requiresPhoto && imageUri == null) Color(0xFFB71C1C) else Color.Black,
                 )
 
                 if (imageUri != null) {
@@ -99,7 +110,7 @@ fun CompleteTaskDialog(
                     OutlinedButton(
                         onClick = {
                             pickImageLauncher.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
+                                PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly,
                                 ),
                             )
@@ -128,7 +139,7 @@ fun CompleteTaskDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = !isUploading) {
+            TextButton(onClick = onConfirm, enabled = canConfirm) {
                 Text("Завершить")
             }
         },

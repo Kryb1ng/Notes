@@ -9,11 +9,11 @@ data class Task(
     val priority: Priority = Priority.MEDIUM,
     val status: TaskStatus = TaskStatus.ACTIVE,
 
-    val createdBy: String = "",
+    val requiresPhoto: Boolean = false,
 
+    val createdBy: String = "",
     val startedDate: Long? = null,
     val startedBy: String? = null,
-
     val completedDate: Long? = null,
     val completedBy: String? = null,
 

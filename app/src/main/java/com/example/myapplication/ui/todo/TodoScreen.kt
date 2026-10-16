@@ -19,7 +19,6 @@ import com.example.myapplication.ui.todo.components.EditTaskDialog
 import com.example.myapplication.ui.todo.components.TaskFilterRow
 import com.example.myapplication.ui.todo.components.CompleteTaskDialog
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoScreen(
     user: User,
@@ -52,7 +51,8 @@ fun TodoScreen(
         onComplete = viewModel::onOpenCompleteDialog,          // ← вместо onCompleteTask
         onCommentChange = viewModel::onCompleteCommentChange,  // ← новое
         onImageSelected = viewModel::onCompleteImageSelected,  // ← новое
-        onConfirmComplete = viewModel::onConfirmComplete,      // ← новое
+        onConfirmComplete = viewModel::onConfirmComplete,
+        onRequiresPhotoChange = viewModel::onRequiresPhotoChange,
         onDismissCompleteDialog = viewModel::onDismissCompleteDialog,
         onRevert = viewModel::onRevertTask,
         onDelete = viewModel::onDeleteTask,
@@ -84,6 +84,7 @@ private fun TodoContent(
     onCommentChange: (String) -> Unit,
     onImageSelected: (android.net.Uri?) -> Unit,
     onConfirmComplete: () -> Unit,
+    onRequiresPhotoChange: (Boolean) -> Unit,
     onDismissCompleteDialog: () -> Unit,
     onRevert: (Task) -> Unit,
     onDelete: (Task) -> Unit,
@@ -174,9 +175,11 @@ private fun TodoContent(
         AddTaskDialog(
             textValue = uiState.textInput,
             selectedPriority = uiState.selectedPriority,
+            requiresPhoto = uiState.requiresPhoto,                     // ← новое
             showError = uiState.showEmptyInputError,
             onTextChange = onTextChange,
             onPrioritySelected = onPrioritySelected,
+            onRequiresPhotoChange = onRequiresPhotoChange,             // ← новое
             onConfirm = onAddClick,
             onDismiss = onDismissAddDialog,
         )
@@ -195,6 +198,7 @@ private fun TodoContent(
         CompleteTaskDialog(
             comment = dialog.comment,
             imageUri = dialog.imageUri,
+            requiresPhoto = dialog.task.requiresPhoto,                // ← из задачи
             isUploading = dialog.isUploading,
             onCommentChange = onCommentChange,
             onImageSelected = onImageSelected,

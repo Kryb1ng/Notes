@@ -72,6 +72,7 @@ class TodoViewModel(
                 Task(
                     text = state.textInput,
                     priority = state.selectedPriority,
+                    requiresPhoto = state.requiresPhoto,   // ← передаём
                     createdBy = currentUser.name,
                 ),
             )
@@ -80,10 +81,19 @@ class TodoViewModel(
             it.copy(
                 textInput = "",
                 selectedPriority = Priority.MEDIUM,
+                requiresPhoto = false,
                 showEmptyInputError = false,
-                showAddDialog = false,                 // ← закрываем диалог
+                showAddDialog = false,
             )
         }
+    }
+
+    fun onRequiresPhotoChange(checked: Boolean) {
+        _uiState.update { it.copy(requiresPhoto = checked) }
+    }
+
+    fun onDismissCompleteDialog() {
+        _uiState.update { it.copy(completeDialog = null) }
     }
 
     fun onStartTask(task: Task) {
@@ -118,35 +128,37 @@ class TodoViewModel(
         }
     }
 
-    fun onDismissCompleteDialog() {
-        _uiState.update { it.copy(completeDialog = null) }
-    }
-
     fun onConfirmComplete() {
         val dialog = _uiState.value.completeDialog ?: return
         val task = dialog.task
+
+        // Если задача требует фото, а его нет — ошибка
+        if (task.requiresPhoto && dialog.imageUri == null) {
+            _uiState.update {
+                it.copy(errorMessage = "Для этой задачи обязателен фото-отчёт")
+            }
+            return
+        }
 
         _uiState.update {
             it.copy(completeDialog = it.completeDialog?.copy(isUploading = true))
         }
 
         launchCatching("Не удалось завершить задачу") {
-            var uploaded: UploadedImage? = null
+            var uploadedImage: UploadedImage? = null
 
-            // 1. Если выбрано фото — загружаем
-            if (dialog.imageUri != null) {
-                uploaded = repository.uploadReportImage(task.id, dialog.imageUri)
+            dialog.imageUri?.let { uri ->
+                uploadedImage = repository.uploadReportImage(task.id, uri)
             }
 
-            // 2. Обновляем задачу
             repository.update(
                 task.copy(
                     status = TaskStatus.COMPLETED,
                     completedDate = System.currentTimeMillis(),
                     completedBy = currentUser.name,
                     reportComment = dialog.comment.ifBlank { null },
-                    reportImageUrl = uploaded?.downloadUrl,
-                    reportImageStoragePath = uploaded?.storagePath,
+                    reportImageUrl = uploadedImage?.downloadUrl,
+                    reportImageStoragePath = uploadedImage?.storagePath,
                 ),
             )
         }
@@ -241,6 +253,7 @@ class TodoViewModel(
                 showAddDialog = true,
                 textInput = "",
                 selectedPriority = Priority.MEDIUM,
+                requiresPhoto = false,
                 showEmptyInputError = false,
             )
         }
@@ -251,6 +264,7 @@ class TodoViewModel(
             it.copy(
                 showAddDialog = false,
                 textInput = "",
+                requiresPhoto = false,
                 showEmptyInputError = false,
             )
         }
