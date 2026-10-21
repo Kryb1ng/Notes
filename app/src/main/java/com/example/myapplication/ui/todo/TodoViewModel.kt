@@ -70,7 +70,7 @@ class TodoViewModel(
         launchCatching("Не удалось добавить задачу") {
             repository.insert(
                 Task(
-                    text = state.textInput,
+                    text = state.textInput.capitalizeFirst(),
                     priority = state.selectedPriority,
                     requiresPhoto = state.requiresPhoto,   // ← передаём
                     createdBy = currentUser.name,
@@ -217,7 +217,7 @@ class TodoViewModel(
         val dialog = _uiState.value.editDialog ?: return
         if (dialog.editedText.isNotBlank()) {
             launchCatching("Не удалось сохранить изменения") {
-                repository.update(dialog.task.copy(text = dialog.editedText))
+                repository.update(dialog.task.copy(text = dialog.editedText.capitalizeFirst()))
             }
         }
         onDismissEditDialog()
@@ -285,5 +285,11 @@ class TodoViewModel(
                     )
                 }
             }
+    }
+}
+
+fun String.capitalizeFirst(): String {
+    return this.replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString()
     }
 }

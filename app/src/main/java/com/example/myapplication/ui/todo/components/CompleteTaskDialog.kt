@@ -4,19 +4,21 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.compose.runtime.saveable.rememberSaveable
 import coil.compose.AsyncImage
 import java.io.File
 import java.util.UUID
@@ -48,8 +50,7 @@ fun CompleteTaskDialog(
     }
 
     fun launchCamera() {
-        val file = File(context.cacheDir, "images").apply { mkdirs() }
-            .let { File(it, "photo_${UUID.randomUUID()}.jpg") }
+        val file = File(File(context.cacheDir, "images").apply { mkdirs() }, "photo_${UUID.randomUUID()}.jpg")
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -63,9 +64,9 @@ fun CompleteTaskDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isUploading) onDismiss() },
-        title = { Text("Отчёт о выполнении") },
+        title = { Text("Отчёт о выполнении", style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = comment,
                     onValueChange = onCommentChange,
@@ -73,35 +74,49 @@ fun CompleteTaskDialog(
                     label = { Text("Комментарий (необязательно)") },
                     minLines = 2,
                     maxLines = 4,
+                    shape = RoundedCornerShape(12.dp), // Единый стиль
                     enabled = !isUploading,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences
+                    )
                 )
 
-                // Заголовок фото-блока с подписью о статусе обязательности
+                // Заголовок фото-блока
                 Text(
                     text = if (requiresPhoto) "Фото-отчёт (обязательно)" else "Фото-отчёт (опционально)",
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (requiresPhoto && imageUri == null) Color(0xFFB71C1C) else Color.Black,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    color = if (requiresPhoto && imageUri == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
 
                 if (imageUri != null) {
-                    Box(
+                    // Превью фото в аккуратной карточке
+                    OutlinedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .height(180.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        AsyncImage(
-                            model = imageUri,
-                            contentDescription = "Прикреплённое фото",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        TextButton(
-                            onClick = { onImageSelected(null) },
-                            enabled = !isUploading,
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        ) {
-                            Text("Убрать", color = Color.White)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = imageUri,
+                                contentDescription = "Прикреплённое фото",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            // Кнопка "Убрать" поверх фото
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(bottomStart = 8.dp),
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            ) {
+                                TextButton(
+                                    onClick = { onImageSelected(null) },
+                                    enabled = !isUploading,
+                                ) {
+                                    Text("Убрать", color = Color.White)
+                                }
+                            }
                         }
                     }
                 }
@@ -115,12 +130,16 @@ fun CompleteTaskDialog(
                                 ),
                             )
                         },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
                         enabled = !isUploading,
                     ) {
                         Text("Из галереи")
                     }
                     OutlinedButton(
                         onClick = { launchCamera() },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
                         enabled = !isUploading,
                     ) {
                         Text("Сделать фото")
@@ -132,14 +151,17 @@ fun CompleteTaskDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        Text("Загрузка…", style = MaterialTheme.typography.bodySmall)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Text("Загрузка фото...", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = canConfirm) {
+            Button(onClick = onConfirm, enabled = canConfirm) {
                 Text("Завершить")
             }
         },
