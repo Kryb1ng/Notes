@@ -62,6 +62,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.exifinterface)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
     //Подключение Room
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
     ksp("androidx.room:room-compiler:2.8.4")

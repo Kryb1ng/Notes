@@ -16,6 +16,7 @@ data class Task(
     val startedBy: String? = null,
     val completedDate: Long? = null,
     val completedBy: String? = null,
+    val deadline: Long? = null,
 
     // Отчёт о выполнении
     val reportComment: String? = null,

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +31,7 @@ import com.example.myapplication.ui.todo.components.ImageViewerDialog
 fun TodoItem(
     task: Task,
     isAdmin: Boolean,
+    canEdit: Boolean,
     onStart: () -> Unit,
     onComplete: () -> Unit,
     onRevert: () -> Unit,
@@ -65,12 +67,8 @@ fun TodoItem(
                         modifier = Modifier
                             .weight(1f)
                             .combinedClickable(
-                                onClick = when (task.status) {
-                                    TaskStatus.ACTIVE -> onStart
-                                    TaskStatus.IN_PROGRESS -> onComplete
-                                    TaskStatus.COMPLETED -> onRevert
-                                },
-                                onLongClick = onEdit,
+                                onClick = { },
+                                onLongClick = if (canEdit) onEdit else null,
                             ),
                         softWrap = true,
                     )
@@ -78,7 +76,6 @@ fun TodoItem(
                     Spacer(Modifier.width(8.dp))
                     StatusChip(status = task.status)
                 }
-
                 Spacer(Modifier.height(8.dp))
 
                 // Передаем готовые строки в UI-компонент
@@ -133,7 +130,16 @@ fun TodoItem(
                         ) { Text("Готово") }
                         TaskStatus.COMPLETED -> OutlinedButton(onClick = onRevert) { Text("Вернуть") }
                     }
-
+                    if (canEdit) {
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                imageVector = Icons.Default.Edit, // Потребуется иконка Edit
+                                contentDescription = "Редактировать",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     if (isAdmin) {
                         Spacer(Modifier.width(8.dp))
                         IconButton(onClick = onDelete) {
@@ -179,18 +185,50 @@ private fun TaskTimeline(task: Task) {
     val lineStyle = MaterialTheme.typography.bodySmall
     val mutedColor = Color.Gray
 
+    // 1. Кто добавил
+    Text(
+        text = task.getCreatedText(),
+        style = lineStyle,
+        color = mutedColor,
+    )
 
-    Text(text = task.getCreatedText(), style = lineStyle, color = mutedColor)
-
+    // 2. Кто взял в работу (если взял)
     task.getStartedText()?.let {
-        Text(text = it, style = lineStyle, color = mutedColor)
+        Text(
+            text = it,
+            style = lineStyle,
+            color = mutedColor,
+        )
     }
 
+    // 3. Кто выполнил (если выполнил)
     task.getCompletedText()?.let {
-        Text(text = it, style = lineStyle, color = mutedColor)
+        Text(
+            text = it,
+            style = lineStyle,
+            color = mutedColor,
+        )
     }
 
+    // 4. Требуется ли фото
     task.photoRequirementText?.let {
-        Text(text = it, style = lineStyle, color = Color(0xFF666666))
+        Text(
+            text = it,
+            style = lineStyle,
+            color = Color(0xFF666666),
+        )
+    }
+
+    // 5. Дедлайн (если есть)
+    task.deadline?.let { deadline ->
+        val isOverdue = deadline < System.currentTimeMillis() && !task.isCompleted
+        val dateStr = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(deadline))
+
+        Text(
+            text = if (isOverdue) "Просрочено: $dateStr" else "Срок: $dateStr",
+            style = lineStyle,
+            color = if (isOverdue) Color(0xFFD32F2F) else Color(0xFF1976D2),
+            fontWeight = if (isOverdue) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+        )
     }
 }

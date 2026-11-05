@@ -42,7 +42,7 @@ fun TodoScreen(
         tasks = tasks,
         uiState = uiState,
         isOffline = isOffline,
-        userName = user.name,
+        currentUserName = user.name,
         isAdmin = viewModel.isAdmin,
         onTextChange = viewModel::onTextInputChange,
         onPrioritySelected = viewModel::onPrioritySelected,
@@ -64,18 +64,17 @@ fun TodoScreen(
         onSaveEdit = viewModel::onSaveEditClick,
         onDismissEdit = viewModel::onDismissEditDialog,
         onErrorDismissed = viewModel::onErrorDismissed,
-        onLogout = onLogout,
+        onDeadlineSelected = viewModel::onDeadlineSelected,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TodoContent(
     tasks: List<Task>,
     uiState: TodoUiState,
     isOffline: Boolean,
-    userName: String,
     isAdmin: Boolean,
+    currentUserName: String,
     onTextChange: (String) -> Unit,
     onPrioritySelected: (Priority) -> Unit,
     onFilterSelected: (TaskFilter) -> Unit,
@@ -96,7 +95,7 @@ private fun TodoContent(
     onSaveEdit: () -> Unit,
     onDismissEdit: () -> Unit,
     onErrorDismissed: () -> Unit,
-    onLogout: () -> Unit,
+    onDeadlineSelected: (Long?) -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -106,27 +105,14 @@ private fun TodoContent(
         onErrorDismissed()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Задачи — $userName") },
-                actions = {
-                    TextButton(onClick = onLogout) { Text("Выйти") }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onOpenAddDialog) {
-                Text("+", style = MaterialTheme.typography.headlineMedium)
-            }
-        },
-    ) { innerPadding ->
+    // Используем Box вместо Scaffold
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // Основной контент
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
+                .padding(16.dp), // Твой стандартный отступ
         ) {
             TaskFilterRow(
                 selected = uiState.selectedFilter,
@@ -151,7 +137,6 @@ private fun TodoContent(
 
             Spacer(Modifier.height(16.dp))
 
-            // Выносим список в отдельный компонент
             TodoList(
                 tasks = tasks,
                 isAdmin = isAdmin,
@@ -160,11 +145,29 @@ private fun TodoContent(
                 onRevert = onRevert,
                 onDelete = onDelete,
                 onEdit = onEdit,
+                currentUserName = currentUserName,
             )
         }
+
+        // Кнопка добавления (FAB) — прижимаем к правому нижнему углу
+        FloatingActionButton(
+            onClick = onOpenAddDialog,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Text("+", style = MaterialTheme.typography.headlineMedium)
+        }
+
+        // Snackbar — прижимаем к нижнему центру
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        )
     }
 
-    // Выносим все диалоги в отдельный компонент
     TodoDialogs(
         uiState = uiState,
         onTextChange = onTextChange,
@@ -179,6 +182,7 @@ private fun TodoContent(
         onImageSelected = onImageSelected,
         onConfirmComplete = onConfirmComplete,
         onDismissCompleteDialog = onDismissCompleteDialog,
+        onDeadlineSelected = onDeadlineSelected,
     )
 }
 
@@ -188,6 +192,7 @@ private fun TodoContent(
 @Composable
 private fun TodoList(
     tasks: List<Task>,
+    currentUserName: String,
     isAdmin: Boolean,
     onStart: (Task) -> Unit,
     onComplete: (Task) -> Unit,
@@ -209,9 +214,11 @@ private fun TodoList(
     } else {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(tasks, key = { it.id }) { task ->
+                val canEdit = task.createdBy == currentUserName || isAdmin
                 TodoItem(
                     task = task,
                     isAdmin = isAdmin,
+                    canEdit = canEdit,
                     onStart = { onStart(task) },
                     onComplete = { onComplete(task) },
                     onRevert = { onRevert(task) },
@@ -241,6 +248,7 @@ private fun TodoDialogs(
     onImageSelected: (Uri?) -> Unit,
     onConfirmComplete: () -> Unit,
     onDismissCompleteDialog: () -> Unit,
+    onDeadlineSelected: (Long?) -> Unit,
 ) {
     // Диалог добавления
     if (uiState.showAddDialog) {
@@ -254,6 +262,8 @@ private fun TodoDialogs(
             onRequiresPhotoChange = onRequiresPhotoChange,
             onConfirm = onAddClick,
             onDismiss = onDismissAddDialog,
+            selectedDeadline = uiState.selectedDeadline,
+            onDeadlineSelected = onDeadlineSelected,
         )
     }
 

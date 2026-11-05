@@ -22,6 +22,7 @@ import com.example.myapplication.ui.session.SessionState
 import com.example.myapplication.ui.session.SessionViewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.ui.todo.TodoScreen
+import com.example.myapplication.ui.MainScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +65,7 @@ private fun AppRoot() {
                 }
             )
 
-            is SessionState.LoggedIn -> TodoScreen(
+            is SessionState.LoggedIn -> MainScreen(
                 user = s.user,
                 onLogout = { sessionVm.logout() },
             )

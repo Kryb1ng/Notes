@@ -72,7 +72,8 @@ class TodoViewModel(
                 Task(
                     text = state.textInput.capitalizeFirst(),
                     priority = state.selectedPriority,
-                    requiresPhoto = state.requiresPhoto,   // ← передаём
+                    requiresPhoto = state.requiresPhoto,
+                    deadline = state.selectedDeadline,
                     createdBy = currentUser.name,
                 ),
             )
@@ -82,6 +83,7 @@ class TodoViewModel(
                 textInput = "",
                 selectedPriority = Priority.MEDIUM,
                 requiresPhoto = false,
+                selectedDeadline = null,
                 showEmptyInputError = false,
                 showAddDialog = false,
             )
@@ -230,6 +232,9 @@ class TodoViewModel(
             val dialog = state.editDialog ?: return@update state
             state.copy(editDialog = dialog.copy(editedText = newText))
         }
+    }
+    fun onDeadlineSelected(timestamp: Long?) {
+        _uiState.update { it.copy(selectedDeadline = timestamp) }
     }
 
     fun onSaveEditClick() {

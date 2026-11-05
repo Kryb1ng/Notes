@@ -14,6 +14,7 @@ data class TodoUiState(
     val errorMessage: String? = null,
     val editDialog: EditDialogState? = null,
     val completeDialog: CompleteDialogState? = null,
+    val selectedDeadline: Long? = null,
 )
 
 data class EditDialogState(
