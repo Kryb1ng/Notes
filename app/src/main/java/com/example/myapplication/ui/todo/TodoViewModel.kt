@@ -108,9 +108,20 @@ class TodoViewModel(
         }
     }
 
+    // Хелпер для вычисления доступности кнопки "Завершить"
+    private fun isSubmitAllowed(task: Task, imageUri: Uri?, isUploading: Boolean): Boolean {
+        return !isUploading && (!task.requiresPhoto || imageUri != null)
+    }
+
     fun onOpenCompleteDialog(task: Task) {
         _uiState.update {
-            it.copy(completeDialog = CompleteDialogState(task = task))
+            it.copy(
+                completeDialog = CompleteDialogState(
+                    task = task,
+                    // Сразу вычисляем, активна ли кнопка (фото ведь еще нет)
+                    isSubmitEnabled = isSubmitAllowed(task, null, false)
+                )
+            )
         }
     }
 
@@ -124,7 +135,13 @@ class TodoViewModel(
     fun onCompleteImageSelected(uri: Uri?) {
         _uiState.update { state ->
             val dialog = state.completeDialog ?: return@update state
-            state.copy(completeDialog = dialog.copy(imageUri = uri))
+            state.copy(
+                completeDialog = dialog.copy(
+                    imageUri = uri,
+                    // Пересчитываем доступность кнопки при смене фото
+                    isSubmitEnabled = isSubmitAllowed(dialog.task, uri, dialog.isUploading)
+                )
+            )
         }
     }
 
@@ -132,16 +149,18 @@ class TodoViewModel(
         val dialog = _uiState.value.completeDialog ?: return
         val task = dialog.task
 
-        // Если задача требует фото, а его нет — ошибка
         if (task.requiresPhoto && dialog.imageUri == null) {
-            _uiState.update {
-                it.copy(errorMessage = "Для этой задачи обязателен фото-отчёт")
-            }
+            _uiState.update { it.copy(errorMessage = "Для этой задачи обязателен фото-отчёт") }
             return
         }
 
         _uiState.update {
-            it.copy(completeDialog = it.completeDialog?.copy(isUploading = true))
+            it.copy(
+                completeDialog = it.completeDialog?.copy(
+                    isUploading = true,
+                    isSubmitEnabled = false // <--- Блокируем кнопку на время загрузки
+                )
+            )
         }
 
         launchCatching("Не удалось завершить задачу") {

@@ -58,7 +58,10 @@ private fun AppRoot() {
             ) { CircularProgressIndicator() }
 
             SessionState.NoUser -> OnboardingScreen(
-                onComplete = { user -> sessionVm.login(user) },
+                errorMessage = sessionVm.errorMessage, // Берем ошибку из ViewModel
+                onLoginClick = { name, role, pass ->
+                    sessionVm.login(name, role, pass) // Вызываем метод ViewModel
+                }
             )
 
             is SessionState.LoggedIn -> TodoScreen(

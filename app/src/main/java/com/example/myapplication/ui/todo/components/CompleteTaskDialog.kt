@@ -29,6 +29,7 @@ fun CompleteTaskDialog(
     imageUri: Uri?,
     requiresPhoto: Boolean,
     isUploading: Boolean,
+    isSubmitEnabled: Boolean,
     onCommentChange: (String) -> Unit,
     onImageSelected: (Uri?) -> Unit,
     onConfirm: () -> Unit,
@@ -59,8 +60,6 @@ fun CompleteTaskDialog(
         cameraUriString = uri.toString()
         takePictureLauncher.launch(uri)
     }
-
-    val canConfirm = !isUploading && (!requiresPhoto || imageUri != null)
 
     AlertDialog(
         onDismissRequest = { if (!isUploading) onDismiss() },
@@ -161,7 +160,7 @@ fun CompleteTaskDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm, enabled = canConfirm) {
+            Button(onClick = onConfirm, enabled = isSubmitEnabled) {
                 Text("Завершить")
             }
         },

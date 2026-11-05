@@ -26,4 +26,5 @@ data class CompleteDialogState(
     val comment: String = "",
     val imageUri: Uri? = null,
     val isUploading: Boolean = false,
+    val isSubmitEnabled: Boolean = false
 )

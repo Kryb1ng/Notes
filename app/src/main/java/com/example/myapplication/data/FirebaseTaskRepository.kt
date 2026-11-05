@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import androidx.core.graphics.scale
 
 
 class FirebaseTaskRepository(
@@ -146,12 +147,7 @@ class FirebaseTaskRepository(
             1f,
         )
         val scaled = if (scale < 1f) {
-            Bitmap.createScaledBitmap(
-                oriented,
-                (oriented.width * scale).toInt(),
-                (oriented.height * scale).toInt(),
-                true,
-            )
+            oriented.scale((oriented.width * scale).toInt(), (oriented.height * scale).toInt())
         } else {
             oriented
         }
@@ -213,7 +209,7 @@ class FirebaseTaskRepository(
         const val IMGBB_API_KEY = "7289cc4953ce53538018415e01a6e6b6"
         const val IMGBB_EXPIRATION_SECONDS = 24L * 60 * 60 // 24 часа
         const val MAX_IMAGE_BYTES = 32 * 1024 * 1024       // лимит ImgBB
-        const val MAX_IMAGE_SIDE = 1280                    // Макс. сторона после сжатия
+        const val MAX_IMAGE_SIDE = 1280                    // Макс сторона после сжатия
         const val JPEG_QUALITY = 80                        // % качества JPEG
     }
 }

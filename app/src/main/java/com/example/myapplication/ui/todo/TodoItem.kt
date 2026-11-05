@@ -23,10 +23,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.TaskStatus
+import com.example.myapplication.ui.common.* // Импортируем наши новые утилиты
 import com.example.myapplication.ui.todo.components.ImageViewerDialog
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun TodoItem(
@@ -43,21 +41,15 @@ fun TodoItem(
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = if (task.isCompleted) {
-                Color(0xFFF1F8E9) // Очень светлый зеленый фон для выполненных
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            containerColor = if (task.isCompleted) Color(0xFFF1F8E9) else MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
             1.dp,
             if (task.isCompleted) Color(0xFFA5D6A7) else MaterialTheme.colorScheme.outlineVariant
         )
     ) {
-        // Оборачиваем в Row, чтобы полоса слева растянулась на всю высоту
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-
-            // ВЕРТИКАЛЬНАЯ ПОЛОСА ПРИОРИТЕТА
+            // Полоса приоритета
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -65,10 +57,7 @@ fun TodoItem(
                     .background(task.priority.priorityColor())
             )
 
-            // ОСНОВНОЙ КОНТЕНТ
             Column(modifier = Modifier.padding(12.dp).weight(1f)) {
-
-                // Заголовок карточки (кружок убран)
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
                         text = task.text,
@@ -91,6 +80,8 @@ fun TodoItem(
                 }
 
                 Spacer(Modifier.height(8.dp))
+
+                // Передаем готовые строки в UI-компонент
                 TaskTimeline(task)
 
                 if (task.isCompleted) {
@@ -104,7 +95,6 @@ fun TodoItem(
                             Text(
                                 text = "Отчёт: $comment",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(8.dp)
                             )
                         }
@@ -126,39 +116,30 @@ fun TodoItem(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Кнопки действий
+                // Кнопки
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     when (task.status) {
-                        TaskStatus.ACTIVE -> {
-                            Button(onClick = onStart) { Text("Выполнить") }
-                        }
-                        TaskStatus.IN_PROGRESS -> {
-                            Button(
-                                onClick = onComplete,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFC8E6C9),
-                                    contentColor = Color(0xFF2E7D32)
-                                )
-                            ) { Text("Готово") }
-                        }
-                        TaskStatus.COMPLETED -> {
-                            OutlinedButton(onClick = onRevert) { Text("Вернуть") }
-                        }
+                        TaskStatus.ACTIVE -> Button(onClick = onStart) { Text("Выполнить") }
+                        TaskStatus.IN_PROGRESS -> Button(
+                            onClick = onComplete,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFC8E6C9),
+                                contentColor = Color(0xFF2E7D32)
+                            )
+                        ) { Text("Готово") }
+                        TaskStatus.COMPLETED -> OutlinedButton(onClick = onRevert) { Text("Вернуть") }
                     }
 
                     if (isAdmin) {
                         Spacer(Modifier.width(8.dp))
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(40.dp)
-                        ) {
+                        IconButton(onClick = onDelete) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Удалить задачу",
+                                contentDescription = "Удалить",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -183,11 +164,7 @@ private fun StatusChip(status: TaskStatus) {
         TaskStatus.IN_PROGRESS -> Color(0xFFFFF3E0) to Color(0xFFE65100)
         TaskStatus.COMPLETED -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
     }
-
-    Surface(
-        color = containerColor,
-        shape = RoundedCornerShape(12.dp),
-    ) {
+    Surface(color = containerColor, shape = RoundedCornerShape(12.dp)) {
         Text(
             text = status.displayName,
             color = contentColor,
@@ -202,33 +179,18 @@ private fun TaskTimeline(task: Task) {
     val lineStyle = MaterialTheme.typography.bodySmall
     val mutedColor = Color.Gray
 
-    Text(
-        text = "Добавил: ${task.createdBy.ifBlank { "—" }} · ${formatDate(task.createdDate)}",
-        style = lineStyle,
-        color = mutedColor,
-    )
-    if (task.startedBy != null && task.startedDate != null) {
-        Text(
-            text = "Взял в работу: ${task.startedBy} · ${formatDate(task.startedDate)}",
-            style = lineStyle,
-            color = mutedColor,
-        )
+
+    Text(text = task.getCreatedText(), style = lineStyle, color = mutedColor)
+
+    task.getStartedText()?.let {
+        Text(text = it, style = lineStyle, color = mutedColor)
     }
-    if (task.completedBy != null && task.completedDate != null) {
-        Text(
-            text = "Выполнил: ${task.completedBy} · ${formatDate(task.completedDate)}",
-            style = lineStyle,
-            color = mutedColor,
-        )
+
+    task.getCompletedText()?.let {
+        Text(text = it, style = lineStyle, color = mutedColor)
     }
-    if (task.requiresPhoto) {
-        Text(
-            text = "📷 Требуется фото-отчёт",
-            style = lineStyle,
-            color = Color(0xFF666666),
-        )
+
+    task.photoRequirementText?.let {
+        Text(text = it, style = lineStyle, color = Color(0xFF666666))
     }
 }
-
-private fun formatDate(timestamp: Long): String =
-    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(timestamp))

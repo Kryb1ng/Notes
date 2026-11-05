@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,34 +14,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.model.AdminPassword
-import com.example.myapplication.model.User
 import com.example.myapplication.model.UserRole
-import com.example.myapplication.ui.todo.capitalizeFirst
+
 @Composable
 fun OnboardingScreen(
-    onComplete: (User) -> Unit,
+    errorMessage: String?, // Принимаем ошибку из ViewModel
+    onLoginClick: (String, UserRole, String) -> Unit // Принимаем функцию логина
 ) {
     var name by remember { mutableStateOf("") }
     var role by remember { mutableStateOf(UserRole.EMPLOYEE) }
     var password by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState()) // Чтобы можно было прокрутить при открытой клавиатуре
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center, // Центрируем по вертикали
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // Приветственный блок
         Text(
             text = "С возвращением!",
             style = MaterialTheme.typography.headlineMedium,
@@ -59,22 +55,18 @@ fun OnboardingScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // Поле ввода имени
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it; error = null },
+            onValueChange = { name = it },
             label = { Text("Ваше имя") },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words
-            )
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
         )
 
         Spacer(Modifier.height(24.dp))
 
-        // Выбор роли в виде карточек
         Text(
             text = "Выберите роль:",
             style = MaterialTheme.typography.titleMedium,
@@ -91,22 +83,21 @@ fun OnboardingScreen(
                 role = UserRole.EMPLOYEE,
                 isSelected = role == UserRole.EMPLOYEE,
                 modifier = Modifier.weight(1f),
-                onClick = { role = UserRole.EMPLOYEE; error = null }
+                onClick = { role = UserRole.EMPLOYEE }
             )
             RoleCard(
                 role = UserRole.ADMIN,
                 isSelected = role == UserRole.ADMIN,
                 modifier = Modifier.weight(1f),
-                onClick = { role = UserRole.ADMIN; error = null }
+                onClick = { role = UserRole.ADMIN }
             )
         }
 
-        // Поле пароля (появляется только для админа)
         if (role == UserRole.ADMIN) {
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it; error = null },
+                onValueChange = { password = it },
                 label = { Text("Пароль администратора") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -116,8 +107,8 @@ fun OnboardingScreen(
             )
         }
 
-        // Сообщение об ошибке
-        error?.let {
+        // Показываем ошибку, которую передал ViewModel
+        errorMessage?.let {
             Spacer(Modifier.height(12.dp))
             Surface(
                 color = Color(0xFFFFEBEE),
@@ -135,36 +126,21 @@ fun OnboardingScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // Кнопка входа
         Button(
             onClick = {
-                when {
-                    name.isBlank() -> error = "Пожалуйста, введите имя"
-                    role == UserRole.ADMIN && password != AdminPassword.VALUE ->
-                        error = "Неверный пароль администратора"
-                    else -> {
-                        val formattedName = name.trim().capitalizeFirst()
-                        onComplete(User(formattedName, role))
-                    }
-                }
+                // Вызываем переданную функцию
+                onLoginClick(name, role, password)
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                text = "Начать работу",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Начать работу", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-/**
- * Карточка для выбора роли. Меняет цвет рамки и фона при выборе.
- */
 @Composable
 private fun RoleCard(
     role: UserRole,
@@ -176,17 +152,12 @@ private fun RoleCard(
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
 
     OutlinedCard(
-        modifier = modifier
-            .height(80.dp)
-            .clickable { onClick() },
+        modifier = modifier.height(80.dp).clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = backgroundColor),
         border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = role.displayName,
                 style = MaterialTheme.typography.titleMedium,
