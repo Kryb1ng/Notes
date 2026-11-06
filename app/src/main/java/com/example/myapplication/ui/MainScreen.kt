@@ -17,6 +17,13 @@ import com.example.myapplication.ui.navigation.AppDrawer
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.todo.TodoScreen
 import kotlinx.coroutines.launch
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +34,25 @@ fun MainScreen(
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var backPressedTime by remember { mutableLongStateOf(0L) }
 
+    // Обработчик кнопки/свайпа "Назад"
+    BackHandler {
+        // Проверяем, нажали ли назад в течение последних 2 секунд (2000 мс)
+        if (backPressedTime + 2000 > System.currentTimeMillis()) {
+            // Закрываем приложение
+            (context as? android.app.Activity)?.finish()
+        } else {
+            // Показываем подсказку
+            Toast.makeText(
+                context,
+                "Нажмите «Назад» еще раз для выхода",
+                Toast.LENGTH_SHORT
+            ).show()
+            backPressedTime = System.currentTimeMillis()
+        }
+    }
     // Получаем текущий маршрут, чтобы менять заголовок в шапке
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -71,7 +96,7 @@ fun MainScreen(
                     TodoScreen(user = user, onLogout = onLogout)
                 }
                 composable(Screen.Calendar.route) { CalendarScreen(user = user) }
-                composable(Screen.Bikes.route) { BikesScreen() }
+                composable(Screen.Bikes.route) { BikesScreen(user = user) }
             }
         }
     }

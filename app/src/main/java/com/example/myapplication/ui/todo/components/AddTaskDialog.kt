@@ -12,6 +12,10 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.model.Priority
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskDialog(
@@ -95,6 +99,11 @@ fun AddTaskDialog(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     isError = showError,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), // Кнопка "Готово"
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (textValue.isNotBlank()) onConfirm() // Нажатие = сохранение
+                    }
+                )
                 )
                 if (showError) {
                     Text("Задача не может быть пустой", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)

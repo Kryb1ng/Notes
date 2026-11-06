@@ -31,6 +31,9 @@ import com.example.myapplication.model.AppEvent
 import com.example.myapplication.model.User
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.myapplication.ui.common.EmptyState
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material3.CircularProgressIndicator
 
 @Composable
 fun CalendarScreen(user: User) {
@@ -88,18 +91,34 @@ fun CalendarScreen(user: User) {
     var showAddDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (events.isEmpty()) {
+        if (viewModel.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Нет запланированных событий", color = Color.Gray)
+                CircularProgressIndicator()
             }
+        } else if (events.isEmpty()) {
+            EmptyState(
+                icon = Icons.Default.DateRange, // Или другую иконку
+                title = "Нет событий",
+                description = "Здесь будут отображаться ваши напоминания и дедлайны."
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(events.sortedBy { it.dateMillis }) { event ->
-                    EventCard(event, viewModel.isAdmin) { viewModel.deleteEvent(event) }
+                items(
+                    items = events.sortedBy { it.dateMillis },
+                    key = { it.id },
+                    contentType = { "event_item" } // <--- ДОБАВИТЬ
+                ) { event ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                    ) {
+                        EventCard(event, viewModel.isAdmin) { viewModel.deleteEvent(event) }
+                    }
                 }
             }
         }
@@ -191,7 +210,17 @@ fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (String, Long, Boolean) -> 
                     onValueChange = { title = it },
                     label = { Text("Название") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            if (title.isNotBlank() && selectedDate != null) {
+                                onConfirm(title, selectedDate!!, isMonthly)
+                            }
+                        }
+                    )
                 )
 
                 OutlinedButton(

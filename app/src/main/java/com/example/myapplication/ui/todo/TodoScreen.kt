@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.model.Priority
 import com.example.myapplication.model.Task
 import com.example.myapplication.model.User
+import com.example.myapplication.ui.common.EmptyState
 import com.example.myapplication.ui.todo.components.AddTaskDialog
 import com.example.myapplication.ui.todo.components.CompleteTaskDialog
 import com.example.myapplication.ui.todo.components.EditTaskDialog
@@ -36,12 +39,13 @@ fun TodoScreen(
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val isLoading = viewModel.isLoading
 
-    // Передаем всё в наш "тупой" UI-компонент
     TodoContent(
         tasks = tasks,
         uiState = uiState,
         isOffline = isOffline,
+        isLoading = isLoading,
         currentUserName = user.name,
         isAdmin = viewModel.isAdmin,
         onTextChange = viewModel::onTextInputChange,
@@ -73,6 +77,7 @@ private fun TodoContent(
     tasks: List<Task>,
     uiState: TodoUiState,
     isOffline: Boolean,
+    isLoading: Boolean,
     isAdmin: Boolean,
     currentUserName: String,
     onTextChange: (String) -> Unit,
@@ -105,14 +110,12 @@ private fun TodoContent(
         onErrorDismissed()
     }
 
-    // Используем Box вместо Scaffold
     Box(modifier = Modifier.fillMaxSize()) {
-
-        // Основной контент
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp), // Твой стандартный отступ
+                .padding(horizontal = 16.dp) // Оставил отступы по бокам, верхний и нижний уберем для списка
+                .padding(top = 16.dp),
         ) {
             TaskFilterRow(
                 selected = uiState.selectedFilter,
@@ -137,19 +140,30 @@ private fun TodoContent(
 
             Spacer(Modifier.height(16.dp))
 
-            TodoList(
-                tasks = tasks,
-                isAdmin = isAdmin,
-                onStart = onStart,
-                onComplete = onComplete,
-                onRevert = onRevert,
-                onDelete = onDelete,
-                onEdit = onEdit,
-                currentUserName = currentUserName,
-            )
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (tasks.isEmpty()) {
+                EmptyState(
+                    icon = Icons.Default.CheckCircle,
+                    title = "Все задачи выполнены!",
+                    description = "Отличная работа. Или нажмите «+», чтобы создать новую задачу."
+                )
+            } else {
+                TodoList(
+                    tasks = tasks,
+                    isAdmin = isAdmin,
+                    onStart = onStart,
+                    onComplete = onComplete,
+                    onRevert = onRevert,
+                    onDelete = onDelete,
+                    onEdit = onEdit,
+                    currentUserName = currentUserName,
+                )
+            }
         }
 
-        // Кнопка добавления (FAB) — прижимаем к правому нижнему углу
         FloatingActionButton(
             onClick = onOpenAddDialog,
             modifier = Modifier
@@ -159,7 +173,6 @@ private fun TodoContent(
             Text("+", style = MaterialTheme.typography.headlineMedium)
         }
 
-        // Snackbar — прижимаем к нижнему центру
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -186,9 +199,6 @@ private fun TodoContent(
     )
 }
 
-/**
- * Вынесенный список задач
- */
 @Composable
 private fun TodoList(
     tasks: List<Task>,
@@ -200,21 +210,22 @@ private fun TodoList(
     onDelete: (Task) -> Unit,
     onEdit: (Task) -> Unit,
 ) {
-    if (tasks.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Пока нет задач. Нажмите «+», чтобы добавить первую.",
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-    } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(tasks, key = { it.id }) { task ->
-                val canEdit = task.createdBy == currentUserName || isAdmin
+    LazyColumn(
+        // ДОБАВИЛИ ОТСТУП СНИЗУ, чтобы FAB не перекрывал последнюю карточку
+        contentPadding = PaddingValues(bottom = 80.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(
+            items = tasks,
+            key = { it.id },
+            contentType = { "task_item" }
+        ) { task ->
+            val canEdit = task.createdBy == currentUserName || isAdmin
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateItem()
+            ) {
                 TodoItem(
                     task = task,
                     isAdmin = isAdmin,
@@ -230,9 +241,6 @@ private fun TodoList(
     }
 }
 
-/**
- * Вынесенный контейнер для диалоговых окон
- */
 @Composable
 private fun TodoDialogs(
     uiState: TodoUiState,
@@ -250,7 +258,6 @@ private fun TodoDialogs(
     onDismissCompleteDialog: () -> Unit,
     onDeadlineSelected: (Long?) -> Unit,
 ) {
-    // Диалог добавления
     if (uiState.showAddDialog) {
         AddTaskDialog(
             textValue = uiState.textInput,
@@ -267,7 +274,6 @@ private fun TodoDialogs(
         )
     }
 
-    // Диалог редактирования
     uiState.editDialog?.let { dialog ->
         EditTaskDialog(
             text = dialog.editedText,
@@ -277,7 +283,6 @@ private fun TodoDialogs(
         )
     }
 
-    // Диалог завершения
     uiState.completeDialog?.let { dialog ->
         CompleteTaskDialog(
             comment = dialog.comment,

@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.example.myapplication.data.UploadedImage
 import com.example.myapplication.data.FirebaseTaskRepository
 import com.example.myapplication.data.TaskRepository
@@ -39,6 +42,17 @@ class TodoViewModel(
     private val tasksSnapshot = repository.getAllTasks()
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
 
+    var isLoading by mutableStateOf(true)
+        private set
+
+    init {
+        // Отключаем загрузку, как только придут первые данные из Firebase
+        viewModelScope.launch {
+            tasksSnapshot.collect {
+                isLoading = false
+            }
+        }
+    }
     val tasks: StateFlow<List<Task>> = combine(
         tasksSnapshot,
         _uiState.map { it.selectedFilter }.distinctUntilChanged(),

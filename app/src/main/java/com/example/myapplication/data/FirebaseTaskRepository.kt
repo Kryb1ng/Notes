@@ -1,4 +1,5 @@
 package com.example.myapplication.data
+import com.example.myapplication.BuildConfig
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -78,7 +79,8 @@ class FirebaseTaskRepository(
 
             // 2. Отправляем multipart/form-data запрос в ImgBB
             val boundary = "Boundary-${System.currentTimeMillis()}"
-            val url = URL("$IMGBB_UPLOAD_URL?key=$IMGBB_API_KEY&expiration=$IMGBB_EXPIRATION_SECONDS")
+            // ПРАВИЛЬНО:
+            val url = URL("$IMGBB_UPLOAD_URL?key=${BuildConfig.IMGBB_API_KEY}&expiration=$IMGBB_EXPIRATION_SECONDS")
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
@@ -206,7 +208,6 @@ class FirebaseTaskRepository(
         const val TAG = "ImgBB"
         const val COLLECTION_NAME = "tasks"
         const val IMGBB_UPLOAD_URL = "https://api.imgbb.com/1/upload"
-        const val IMGBB_API_KEY = "7289cc4953ce53538018415e01a6e6b6"
         const val IMGBB_EXPIRATION_SECONDS = 24L * 60 * 60 // 24 часа
         const val MAX_IMAGE_BYTES = 32 * 1024 * 1024       // лимит ImgBB
         const val MAX_IMAGE_SIDE = 1280                    // Макс сторона после сжатия
