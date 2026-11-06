@@ -70,7 +70,7 @@ fun MainScreen(
                     // Передаем только user и onLogout, шапку теперь рисует MainScreen
                     TodoScreen(user = user, onLogout = onLogout)
                 }
-                composable(Screen.Calendar.route) { CalendarScreen() }
+                composable(Screen.Calendar.route) { CalendarScreen(user = user) }
                 composable(Screen.Bikes.route) { BikesScreen() }
             }
         }
